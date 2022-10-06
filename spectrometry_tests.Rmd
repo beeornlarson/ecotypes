@@ -1,0 +1,30 @@
+---
+title: "Untitled"
+author: "Bjorn Larson"
+date: '2022-08-06'
+output: html_document
+---
+
+```{r}
+library(tidyverse)
+library(lubridate)
+```
+
+```{r}
+d4 <- read.csv("C:/Users/beeor/Downloads/Smoky Spectrometry - Smoky Spectrometry.csv")%>%
+  mutate(Time = ymd_hms(Time), .before = Time)
+
+d <- read.csv("C:/Users/beeor/Downloads/Spectrometer_8-5.csv")%>%
+  mutate(Time = ymd_hms(ï..Time)- hours(2), .before = ï..Time)
+
+d2 <- read.csv("C:/Users/beeor/Downloads/Spectrometer_8-2.csv")%>%
+  mutate(Time = ymd_hms(ï..Time)- hours(2), .before = ï..Time)
+
+d3 <- rbind(d, d2)
+```
+
+```{r}
+ggplot(data = d4)+
+  geom_line(aes(x = Time, y = PPFD.400.700nm.))
+```
+

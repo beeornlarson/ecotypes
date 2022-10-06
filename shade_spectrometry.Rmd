@@ -1,0 +1,72 @@
+---
+title: "Untitled"
+author: "Bjorn Larson"
+date: '2022-08-05'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+```
+
+
+```{r}
+paste("C:/Users/beeor/Downloads/drive-download-20220805T221150Z-001/shade", 1, "over.txt", sep = "")
+shade_spectrometry <- read.delim("C:/Users/beeor/Downloads/drive-download-20220805T221150Z-001/shade1over.txt")%>%
+  pivot_wider(names_from = Model.Name, values_from = LI.180)%>%
+  mutate(Shade_number = 1,
+         Shade_position = "Open", .before = "Serial Number")
+
+for(i in 1:12){
+  shade_i <- read.delim(paste("C:/Users/beeor/Downloads/drive-download-20220805T221150Z-001/shade", i, "over.txt", sep = ""))%>%
+  pivot_wider(names_from = Model.Name, values_from = LI.180)%>%
+  mutate(Shade_number = i,
+         Shade_position = "Open", .before = "Serial Number")
+  shade_spectrometry[i+12,] <- shade_i
+}
+
+write.csv(shade_spectrometry, "C:/Users/beeor/Downloads/drive-download-20220805T221150Z-001/shades.csv")
+```
+
+
+
+
+```{r}
+d <- shade_spectrometry%>%
+  mutate(across(5:472, as.numeric))%>%
+  group_by(Shade_position)%>%
+  summarise(across(5:471, mean))%>%
+  select(Shade_position, 41:441)%>%
+  pivot_longer(cols = 2:402, names_to = "Wavelength", values_to = "Intensity")%>%
+  mutate(Wavelength = as.numeric(substr(Wavelength, 1, 3)))
+```
+
+```{r}
+shade_spectrometry%>%
+  mutate(across(5:472, as.numeric))%>%
+  group_by(Shade_position)%>%
+  summarise(across(4:5, mean))
+```
+
+```{r}
+p <- ggplot() +
+  geom_line(data = d, aes( x = Wavelength, y = Intensity, linetype = Shade_position))+
+  theme_classic()+
+  geom_rect(data = df1, aes(xmin = xmin, ymin = ymin, xmax = xmax, ymax = ymax, fill = fill_cool), alpha = 0.5)+
+  scale_fill_identity()
+p
+```
+
+```{r}
+df1 <- data.frame(xmin = seq(380,780),
+                 ymin = rep(-Inf, 401),
+                 xmax = seq(381, 781),
+                 ymax = rep(Inf, 401),
+                 fill = seq(380, 780))%>%
+  mutate(fill_cool = w_2_H(fill))
+```
+

@@ -1,0 +1,65 @@
+---
+title: "WS_testing"
+author: "Bjorn Larson"
+date: '2022-07-08'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(lubridate)
+```
+
+```{r}
+cfdf <- read.csv("C:/Users/beeor/Downloads/WS_Data-20220708T000036Z-001/WS_Data/Coldfoot/6-16-6-29/.csv/TOA5_Coldfoot.FiveMinute.csv")%>%
+  mutate(Timestamp = mdy_hm(TIMESTAMP))%>%
+  filter( ymd_hms("2022-06-16 00:00:00") <= Timestamp)%>%
+  filter( ymd_hms("2022-06-29 00:00:00") > Timestamp)%>%
+  mutate(Five = Temp_C_5cm,
+         Ten = Temp_C_10cm,
+         Air = AirTC_Avg,
+         Location = rep("CF", length(Air))) %>%
+  select(one_of(c("Timestamp", "Location", "Five", "Ten", "Air")))%>%
+  pivot_longer(cols = c("Five", "Ten", "Air"), names_to = "Depth", values_to = "Temp")
+
+tldf <- read.csv("C:/Users/beeor/Downloads/WS_Data-20220708T000036Z-001/WS_Data/Toolik/6-16/.csv/CR3000_Sample.csv")%>%
+  mutate(Timestamp = mdy_hm(TIMESTAMP)) %>%
+  select(one_of(c("Timestamp", "Temp_C_5cm", "Temp_C_10cm")))%>%
+  filter( ymd_hms("2022-06-16 12:00:00") <= Timestamp)%>%
+  filter( ymd_hms("2022-07-05 00:00:00") > Timestamp)%>%
+  filter(minute(Timestamp) %% 5 == 0)%>%
+  mutate(Five = as.double(Temp_C_5cm),
+         Ten = Temp_C_10cm,
+         Location = rep("TL", length(Ten))) %>%
+  select(one_of(c("Timestamp", "Location", "Five", "Ten")))%>%
+  pivot_longer(cols = c("Five", "Ten"), names_to = "Depth", values_to = "Temp")
+
+sgdf <- read.csv("C:/Users/beeor/Downloads/WS_Data-20220708T000036Z-001/WS_Data/Sagwon/6-18-7-4/.csv/TOA5_Sagwon.FiveMinute.csv")%>%
+  mutate(Timestamp = mdy_hm(TIMESTAMP))%>%
+  filter( ymd_hms("2022-06-19 00:00:00") <= Timestamp)%>%
+  filter( ymd_hms("2022-07-04 00:00:00") > Timestamp)%>%
+  mutate(Five = Temp_C_5cm,
+         Ten = Temp_C_10cm,
+         Air = AirTC_Avg,
+         Location = rep("SG", length(Air))) %>%
+  select(one_of(c("Timestamp", "Location", "Five", "Ten", "Air")))%>%
+  pivot_longer(cols = c("Five", "Ten", "Air"), names_to = "Depth", values_to = "Temp")
+```
+
+```{r}
+combined <- bind_rows(cfdf, tldf, sgdf)%>%
+  filter(Depth == "Five")
+```
+
+
+```{r}
+ggplot()+
+  geom_line(data = combined, aes(x = Timestamp, y = Temp,  color = Location, linetype = Depth), size = 1.2)+
+  theme_classic()
+  
+```
+

@@ -1,0 +1,27 @@
+---
+title: "Untitled"
+author: "Bjorn Larson"
+date: '2022-08-06'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(lubridate)
+```
+
+```{r}
+read_csv("C:/Users/beeor/Downloads/E.vaginatum_Leaf_Phenolgy_2022 - Toolik (2).csv")%>%
+  select(1:2, 4, 6:8, 10,12,14:37)%>%
+  rename(l153 = GreenLength_W22,
+         l165 = GreenLength_W24,
+         l172 = GreenLength_W25,
+         l183 = GreenLength_W26,
+         l192 = GreenLength_W28,
+         l202 = GreenLength_W29,
+         l207 = GreenLength_W30,
+         l210 = GreenLength_W30B,
+         l215 = X36)
+```
+

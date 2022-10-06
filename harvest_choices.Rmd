@@ -1,0 +1,142 @@
+---
+title: "Untitled"
+author: "Bjorn Larson"
+date: '2022-07-12'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(lubridate)
+```
+
+```{r}
+d <- read.csv("C:/Users/beeor/Downloads/Total Green Length - Toolik (18).csv")%>%
+  select(1:18)
+```
+
+```{r}
+tussocks <- d%>%
+  pivot_longer(7:18, names_to = "Day", values_to = "Length")%>%
+  mutate(Tussock = paste(Plot, Ind, sep = ""),
+         Selected = as.factor(if_else(Tussock %in% c("SG2C", "SG3A", "SG14B"), "Yes", "No")),
+         Happy = as.factor(if_else(Tussock %in% c("SG3C", "SG3A", "SG8C", "SG8B", "SG10A", "SG10C", "SG11A", "SG11B", "SG11C", "SG14A", "SG14B"), "Happy", "Sad")),
+         Day = as.numeric(substr(Day, 2,4)),
+         SGSelections = as.factor(if_else(Tussock %in% c("SG3A", "SG3c", "SG11A", "SG11B", "SG11C", "SG14A", "SG14B", "SG10A", "SG10C", "SG8B", "SG8C"), Tussock, "Not Selected")),
+         TLSelections = as.factor(if_else(Tussock %in% c("TL5A", "TL2A", "TL2B", "TL8A", "TL8C", "TL17A", "TL17C", "TL19A", "TL19C"), Tussock, "Not Selected")),
+         CFSelections = as.factor(if_else(Tussock %in% c("CF10A", "CF10C", "CF2C", "CF5A"), Tussock, "Not Selected")))%>%
+  filter(!is.na(Length))
+```
+
+```{r}
+SGSelections <- c( "Red", "darkgoldenrod3", "darkgoldenrod4", "chartreuse2", "chartreuse3", "chartreuse4", "deeppink2", "deeppink4","Purple",  "Blue", "blue3", "Orange", "orange3", "Red")
+TLSelections <- c("blue", "blue2", "darkgoldenrod4", "chartreuse2", "chartreuse4", "deeppink2", "deeppink4","blue3",  "red", "red", "blue4", "orange3", "Red")
+tussocks <- tussocks%>%
+  filter(Src == "CF")%>%
+  filter(OTC == 0)
+alphs <- c(0.5,1)
+ggplot(tussocks)+
+  geom_line(aes(x = Day, y = Length, group = Tussock, color = CFSelections, size = CFSelections, alpha = CFSelections))+
+  scale_color_manual(values = c("Blue", "Yellow", "orange", "Green", "Red"))+
+  scale_size_manual(values = c(1.5, 1.5, 1.5, 1.5, 0.4))+
+  scale_alpha_manual(values = c(1, 1, 1,1, 0.2))+
+  theme_classic()+
+  labs(x = "Day of Year", y= "Total Green Length (cm)")
+  geom_smooth(aes(x = Day, y = Length), method = "loess")
+```
+
+```{r}
+rates <- d%>%
+  # mutate(X202 = X202/X153,
+  #        X192 = X192/X153,
+  #        X183 = X183/X153,
+  #        X172 = X172/X153,
+  #        X165 = X165/X153,
+  #        X153 = 1)%>%
+  pivot_longer(7:16, names_to = "Day", values_to = "Rate")%>%
+  mutate(Day = as.numeric(substr(Day, 2,4)))%>%
+  group_by(Src, Day, OTC)%>%
+  summarise(mean = mean(Rate)/3,
+            Loc = "TL",)%>%
+  mutate(OTC = as.factor(OTC))%>%
+  filter(Day != 207)%>%
+  filter(Day != 229)
+ggplot(rates, aes(x = Day, y = mean, color = Src, shape = shades, linetype = shades))+
+  geom_point() + geom_line()+
+  scale_linetype_manual(values = c("dotdash", "solid"))+
+  scale_shape_manual(values = c("triangle", "circle"))+
+  theme_classic()
+```
+
+```{r}
+shades <- d%>%
+  # mutate(X202 = X202/X153,
+  #        X192 = X192/X153,
+  #        X183 = X183/X153,
+  #        X172 = X172/X153,
+  #        X165 = X165/X153,
+  #        X153 = 1)%>%
+  pivot_longer(7:18, names_to = "Day", values_to = "Rate")%>%
+  filter(OTC == 0)%>%
+  mutate(Day = as.numeric(substr(Day, 2,4)))%>%
+  group_by(Src, Day, Shade)%>%
+  summarise(mean = mean(Rate)/3,
+            Loc = "TL",)%>%
+  mutate(Shade = as.factor(Shade))%>%
+  filter(Day != 207)%>%
+  filter(Day != 229)
+ggplot(shades, aes(x = Day, y = mean, color = Src, shape = Shade, linetype = Shade))+
+  geom_point() + geom_line()+
+  scale_linetype_manual(values = c("solid", "dotdash"))+
+  scale_shape_manual(values = c("circle", "triangle"))+
+  theme_classic()
+```
+
+
+```{r}
+d2 <- read.csv("C:/Users/beeor/Downloads/Total Green Length - Coldfoot (9).csv")%>%
+  select(1:17)
+rates2 <- d2%>%
+  # mutate(X201 = X201/X153,
+  #       X194 = X194/X153,
+  #       X187 = X187/X153,
+  #       X180 = X180/X153,
+  #       X173 = X173/X153,
+  #       X166 = X166/X153,
+  #       X160 = X160/X153,
+  #       X153 = 1)%>%
+  pivot_longer(6:17, names_to = "Day", values_to = "Rate")%>%
+  mutate(Day = as.numeric(substr(Day, 2,4)),
+         Loc = "CF")%>%
+  group_by(Src, Day, Light)%>%
+  summarise(mean = mean(Rate)/2)%>%
+  mutate(Loc = "CF",
+         Light = as.factor(Light))
+ggplot(rates2, aes(x = Day, y = mean, color = Src, shape = Light, linetype = Light))+
+  geom_point() + geom_line()+
+  scale_linetype_manual(values = c("dotdash", "solid"))+
+  scale_shape_manual(values = c("triangle", "circle"))+
+  theme_classic()
+```
+
+
+```{r}
+d3 <- read.csv("C:/Users/beeor/Downloads/Total Green Length - Sagwon (2).csv")%>%
+  select(1:12)
+ rates3 <- d3%>%
+#   mutate(X199 = X199/X168,
+#         X185 = X185/X168,
+#         X175 = X175/X168,
+#         X168 = 1)%>%
+  pivot_longer(5:12, names_to = "Day", values_to = "Rate")%>%
+  mutate(Day = as.numeric(substr(Day, 2,4)))%>%
+  group_by(Src, Day)%>%
+  summarise(mean = mean(Rate)/2)%>%
+   mutate(Loc = "SG")%>%
+   filter(Src != "")
+data <- full_join(full_join(rates, rates2), rates3,)
+ggplot(data, aes(x = Day, y = mean))+
+  geom_point(aes(color = Src, fill = Loc), shape = 21, size = 5, stroke = 1.3)+
+  scale_fill_manual(values = c("black", "grey", "white"))
+```
+

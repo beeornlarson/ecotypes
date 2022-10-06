@@ -1,0 +1,44 @@
+---
+title: "Photo_Renamer"
+author: "Bjorn Larson"
+date: '2022-06-27'
+output: html_document
+---
+
+```{r}
+library(lubridate)
+library(stringr)
+library(exifr)
+library(tidyr)
+```
+
+```{r}
+setwd("E:/Phenocam Pictures/Coldfoot/CF-CF-9/Combined")
+files <- list.files()
+dat <- read_exif(files)%>%
+  dplyr::select(FileName, CreateDate)
+```
+
+#Changeables
+```{r}
+camera <- "CF-CF-9" #Camera Name
+site <- "Coldfoot" #Site
+```
+
+#Setup (don't change)
+```{r}
+my_path <- paste0("E:/Phenocam Pictures/", site, "/", camera, "/Combined/")
+file_list <- list.files(my_path, full = TRUE)
+my_path
+```
+
+#Fixer Loop
+```{r}
+names <- read_exif(file_list)%>%
+  dplyr::select(FileName, CreateDate)%>%
+  dplyr::mutate(CreateDate = str_replace_all(CreateDate, ":", " "))
+
+for(i in 1:length(names[[1]])){
+  file.rename(from = paste0(my_path, names[[i,1]]), to = paste0(my_path, names[[i,2]], ".jpg"))
+}
+```

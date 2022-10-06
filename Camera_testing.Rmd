@@ -1,0 +1,33 @@
+---
+title: "Untitled"
+author: "Bjorn Larson"
+date: '2022-06-21'
+output: html_document
+---
+
+```{r}
+library(tidyverse)
+```
+
+
+```{r}
+d <- read.csv("C://Users/beeor/Desktop/Results.csv")%>%
+  group_by(Color)%>%
+  mutate(View = rep("Target", 78))
+  
+d2 <- read.csv("C://Users/beeor/Desktop/Results2.csv")%>%
+  group_by(Color)%>%
+  mutate(View = rep("Tussock", 79))
+My ma
+```
+
+```{r}
+ggplot(data = d)+
+  geom_point(aes(x = Label, y = Mean, color = Color))
+```
+
+```{r}
+ggplot(data = d2)+
+  geom_point(aes(x = Label, y = Mean, color = Color))
+```
+

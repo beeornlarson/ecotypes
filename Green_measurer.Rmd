@@ -1,0 +1,41 @@
+---
+title: "Green_measurer"
+author: "Bjorn Larson"
+date: '2022-07-09'
+output: html_document
+---
+
+```{r}
+library(tidyverse)
+library(gganimate)
+```
+
+```{r}
+leaves <- read.csv("C:/Users/beeor/Downloads/E.vaginatum_Leaf_Phenolgy_2022 - Toolik ().csv")%>%
+  select(one_of(c("Pop", "Rep", "Ind", "Tiller", "Leaf",  "GreenLength_W22", "GreenLength_W24", "GreenLength_W25", "GreenLength_W26", "GreenLength_W28")))%>%
+  mutate(Source = Pop)%>%
+  unite(Tussock, Pop:Ind, sep = "")%>%
+  pivot_longer(cols = GreenLength_W22:GreenLength_W28, names_to = "Week", values_to = "GreenLength")
+```
+
+```{r}
+tussocks <- leaves %>%
+  select("Source", "Week", "Tussock", "GreenLength")%>%
+  group_by(Tussock, Week)%>%
+  summarize(Green = sum(GreenLength, na.rm = TRUE))%>%
+  mutate(Source = substr(Tussock, 0, 2))
+
+```
+
+```{r}
+plot <- ggplot(data = tussocks)+
+  geom_density(aes(x = Green, color = Source))+
+  theme_classic()
+```
+
+```{r}
+anim <- plot +
+  transition_states(Week, transition_length = 0, state_length = 5)
+animate(anim, nframes =  30, fps = 4)
+```
+

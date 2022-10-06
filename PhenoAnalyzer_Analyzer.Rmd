@@ -1,0 +1,111 @@
+---
+title: "Untitled"
+output: word_document
+date: "2022-08-18"
+---
+
+```{r}
+library(tidyverse)
+library(lubridate)
+library(plotly)
+library(hms)
+```
+
+
+```{r}
+d <- read.csv("E:/Phenocam_Analysis/CF_CF_9-dates.csv")%>%
+  select(1,2,6,8)%>%
+  mutate(datetime = ymd_hms(substr(img, 1, 19)),
+         date = date(datetime),
+         time = parse_hms(str_replace_all(substr(img, 12, 19), " ", ":")))%>%
+  select('datetime', 'date', 'time', 'idx_label', 'RGB.2G_RBi', "RGB.pctG")
+```
+
+```{r}
+d_rem<- read.csv("C:/Users/ecotypes/Downloads/takeout.csv")
+d1 = d%>%
+  filter(!idx_label %in% d_rem$Index)
+```
+
+```{r}
+d2<-d1%>%
+  group_by(date)%>%
+  summarize(median = median(RGB.2G_RBi))
+d3 <- d1 %>%
+  right_join(d2, d1, by = 'date')%>%
+  mutate(resid = RGB.2G_RBi - median)%>%
+```
+
+```{r}
+d4 = d3%>%
+  filter(resid < 10)%>%
+  filter(resid > -10)
+#  filter(time > hms(00,00,07))
+```
+
+
+```{r}
+plot_ly(d3, x = ~datetime, y = ~(RGB.2G_RBi-mean(RGB.2G_RBi, na.rm = TRUE)), hoverinfo = "text", hovertext = paste("Date: ", d3$datetime, "<br>2G_RBi: ", d3$RGB.2G_RBi, "<br>Index: ", d3$idx_label), type = "scatter", mode = "lines+markers")%>%
+  layout(xaxis=list(title = "Date"), yaxis = list(title = "2G_RBi"))
+```
+```{r}
+d2 <- read.csv("C:/Users/ecotypes/Downloads/Total Green Length - Coldfoot.csv")%>%
+  select(1:18)
+rates2 <- d2%>%
+  # mutate(X201 = X201/X153,
+  #       X194 = X194/X153,
+  #       X187 = X187/X153,
+  #       X180 = X180/X153,
+  #       X173 = X173/X153,
+  #       X166 = X166/X153,
+  #       X160 = X160/X153,
+  #       X153 = 1)%>%
+  pivot_longer(6:18, names_to = "Day", values_to = "Rate")%>%
+  mutate(date = floor_date(as.Date(as.numeric(substr(Day, 2,4))-1, origin = "2022-01-01")),
+         Loc = "CF")%>%
+  filter(Plot == "CF9")%>%
+  filter(Ind == "A")
+
+joined <- full_join(d3, rates2, by = "date")
+
+```
+
+
+```{r}
+plot_ly(d3, x = ~datetime, y = ~RGB.2G_RBi), hoverinfo = "text", hovertext = paste("Date: ", d4$datetime, "<br>2G_RBi: ", d4$RGB.2G_RBi, "<br>Index: ", d4$idx_label), type = "scatter", mode = "lines+markers")%>%
+  layout(xaxis=list(title = "Date"), yaxis = list(title = "2G_RBi"))
+
+coeff<-1
+
+x<- c(12,2,3)
+
+(x-mean(x))/sd(x)
+(joined$RGB.2G_RBi-mean(joined$RGB.2G_RBi, na.rm = TRUE))/sd(joined$RGB.2G_RBi, na.rm = TRUE)
+ggplot(joined)+
+  geom_point(aes(x = date, y = (RGB.2G_RBi-mean(RGB.2G_RBi, na.rm = TRUE))/sd(RGB.2G_RBi, na.rm = TRUE)))+
+  geom_point(aes(x = date, y = (RGB.pctG-mean(RGB.pctG, na.rm = TRUE))/sd(RGB.pctG, na.rm = TRUE)), color = "Red")
+
+
+```
+
+
+```{r}
+ggplot(d, aes(x = time, y = resid))+
+  geom_point(alpha = 0.1)+
+  geom_smooth(method = "lm")+
+  labs(y = "Distance from daily mean", x = "Time of Day")
+```
+
+```{r}
+d2 <- d%>%
+  mutate(datetime = floor_date(datetime, unit = "hour"),
+         time = as.factor(hour(datetime)))%>%
+  group_by(time)
+
+summarize(d2, mean = mean(resid))
+ggplot(d2, aes(y = resid, x = time))+
+  geom_boxplot()+
+  labs(y = "Distance from daily mean", x = "Time of Day")
+```
+
+

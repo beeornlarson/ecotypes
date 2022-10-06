@@ -1,0 +1,29 @@
+---
+title: "Untitled"
+output: html_document
+date: "2022-10-05"
+---
+
+```{r}
+library(tidyverse)
+library(plotly)
+library(lubridate)
+```
+
+
+```{r}
+july2 <- read.csv("C:/Users/ecotypes/Downloads/TL-WS-FiveMin-7.6-7.19.csv")
+july3 <- read.csv("C:/Users/ecotypes/Downloads/TL-WS-FiveMin-7.19-8.9.csv")
+june1 <- read.csv("C:/Users/ecotypes/Downloads/TL-WS-FiveMin-6.16-7.5.csv")
+aug1 <- read.csv("C:/Users/ecotypes/Downloads/TL-WS-FiveMin-8.9-8.29.csv")
+july1 <- read.csv("C:/Users/ecotypes/Downloads/TL-WS-FiveMin-7.5-7.6.csv")
+
+d<-rbind(june1, july1, july2, july3, aug1)%>%
+  mutate(datetime = mdy_hm(TIMESTAMP))%>%
+  arrange(desc(datetime))
+
+
+plot_ly(d, x = ~datetime, y = ~PPFD_Avg, type = "scatter")
+
+```
+

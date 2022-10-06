@@ -1,0 +1,115 @@
+---
+title: "Photo_Renamer"
+author: "Bjorn Larson"
+date: '2022-06-27'
+output: html_document
+---
+
+```{r}
+library(lubridate)
+library(stringr)
+library(exifr)
+library(tidyr)
+library(filesstrings)
+library(hms)
+```
+
+#Changeables
+```{r}
+camera <- "TL-TL-2" #Camera Name
+site <- "Toolik Lake" #Site
+```
+
+#Setup (don't change)
+```{r}
+my_path <- paste0("E:/Phenocam Pictures/", site, "/", camera, "/Combined/")
+bad_photo_path <- paste0(my_path, "Bad/")
+good_photo_path <- paste0(my_path, "Good/")
+test <- paste0(my_path, "Test/")
+my_path
+```
+```{r}
+file_info1 <- file_info1%>%
+  filter(FileSize > 4000000)
+ggplot(file_info1, aes(FileSize))+
+  geom_density()+
+  geom_vline(xintercept = mean(file_info1$FileSize)-2.5*sd(file_info1$FileSize))
+```
+```{r}
+
+file_info2 <- file_info2%>%
+  filter(FileSize > 4000000)
+ggplot(file_info2, aes(FileSize))+
+  geom_density()+
+  geom_vline(xintercept = mean(file_info2$FileSize)-2.5*sd(file_info2$FileSize))
+```
+
+```{r}
+file_info <- file_info%>%
+  filter(FileSize > 4000000)
+ggplot(file_info, aes(FileSize))+
+  geom_density()+
+  geom_vline(xintercept = mean(file_info$FileSize))+
+  geom_vline(xintercept = mean(file_info$FileSize)-2.5*sd(file_info$FileSize))
+```
+
+
+
+#Fixer Loop
+```{r}
+file_list <- list.files(my_path, full = TRUE, pattern = "*.JPG")
+
+file_info2 <- read_exif(file_list)%>%
+  dplyr::select(FileName, CreateDate, FileSize)%>%
+  dplyr::mutate(CreateDate = str_replace_all(CreateDate, ":", " "))
+
+for(i in 1:length(file_info2[[1]])){
+  old_name <- paste0(my_path, file_info2[[i,1]])
+  new_name <- paste0(my_path, file_info2[[i,2]], ".JPG")
+  
+  file.rename(from = old_name, to = new_name)
+  
+  ifelse(file_info2[[i,3]] < mean(file_info2[[3]]) - 2.5*sd(file_info2[[3]])), 
+          move_files(new_name, bad_photo_path, overwrite = FALSE),
+          move_files(new_name, good_photo_path, overwrite = FALSE))
+}
+```
+
+
+```{r}
+july2 <- read.csv("C:/Users/ecotypes/Downloads/TL-WS-FiveMin-7.6-7.19.csv")
+july3 <- read.csv("C:/Users/ecotypes/Downloads/TL-WS-FiveMin-7.19-8.9.csv")
+june1 <- read.csv("C:/Users/ecotypes/Downloads/TL-WS-FiveMin-6.16-7.5.csv")
+aug1 <- read.csv("C:/Users/ecotypes/Downloads/TL-WS-FiveMin-8.9-8.29.csv")
+july1 <- read.csv("C:/Users/ecotypes/Downloads/TL-WS-FiveMin-7.5-7.6.csv")
+
+d<-rbind(june1, july1, july2, july3, aug1)%>%
+  mutate(datetime = mdy_hm(TIMESTAMP))%>%
+  arrange(desc(datetime))
+
+file_info3 <- as.data.frame(file_info2)%>%
+  dplyr::select(FileName, LightValue, CreateDate)%>%
+  mutate(datetime = floor_date(ymd_hms(substr(CreateDate, 1, 19)), unit =  "minute"),
+         date = date(datetime),
+         time = lubridate::hms(parse_hms(str_replace_all(substr(CreateDate, 12, 19), " ", ":"))))
+  
+light_files <- file_info3
+
+d1 <- left_join(file_info3, d, by = "datetime")
+
+p <- ggplot(d1, aes(x = LightValue, y = NDVI_Red_FR_Up_Avg, z = PPFD_Avg, color = datetime))+
+  geom_point()
+
+ggplotly(p)
+
+plot_ly(d1, x = ~time, y = ~LightValue, type = "scatter", hovertext = paste("Date: ", d1$datetime))
+
+for(i in 1:length(light_files[[1]])){
+  old_name <- paste0(my_path, light_files[[i,1]])
+  new_name <- paste0(my_path, light_files[[i,2]], ".JPG")
+  
+  file.rename(from = old_name, to = new_name)
+}
+  
+```
+

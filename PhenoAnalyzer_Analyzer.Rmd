@@ -2,7 +2,9 @@
 title: "Analyzing Results of Image Processing"
 author: "Bjorn Larson"
 date: "2022-08-18"
-output: github_document
+output:
+  html_document:
+    keep_md: true
 ---
 
 ```{r}

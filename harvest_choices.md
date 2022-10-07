@@ -1,23 +1,18 @@
----
-title: "Graph to help in selecting tussocks for harvest"
-author: "Bjorn Larson"
-date: '2022-07-12'
-output: github_document
----
-
-```{r setup, include=FALSE}
-library(tidyverse)
-library(lubridate)
-```
+Graph to help in selecting tussocks for harvest
+================
+Bjorn Larson
+2022-07-12
 
 Reading in data
-```{r}
+
+``` r
 green_data <- read.csv("Total Green Length.csv")%>%
   mutate(across(1:9, as.factor))
 ```
 
-Adding in some factors like "happiness" and selections of tussocks
-```{r, message = FALSE}
+Adding in some factors like “happiness” and selections of tussocks
+
+``` r
 selections <- green_data%>%
   filter(Loc == "TL")%>%
   mutate(Tussock = paste0(Plot, Ind),
@@ -29,7 +24,8 @@ selections <- green_data%>%
 ```
 
 Graphing the selected tussocks
-```{r, message = FALSE, warning = FALSE}
+
+``` r
 CF_selections <- selections%>%
   filter(Src == "CF")%>%
   filter(OTC == 0)
@@ -43,3 +39,4 @@ ggplot(CF_selections)+
   labs(x = "Day of Year", y= "Total Green Length (cm)")
 ```
 
+![](harvest_choices_files/figure-gfm/unnamed-chunk-3-1.png)<!-- -->

@@ -37,8 +37,8 @@ processed <- combined%>%
   mutate(DoY = as.integer(substr(DoY, 2, 4)),#Making the day of year easy to use as a variable
          fullPlot = paste0(Loc, "-", Src, "-", Rep, Ind),
          Light = replace_na(Light, 0),
-         OTC = replace_na(Light, 0),
-         Shade = replace_na(Light, 0)#if the site didn't have OTCs, Lights, or Shades, marks as 0 instead of NA
+         OTC = replace_na(OTC, 0),
+         Shade = replace_na(Shade, 0)#if the site didn't have OTCs, Lights, or Shades, marks as 0 instead of NA
   )%>%
   select(Light, Shade, OTC, Loc, Src, Rep, Ind, Plot, fullPlot, DoY, tot_Gr)
 head(processed)#show the first 5 rows of the processed data
@@ -47,12 +47,12 @@ head(processed)#show the first 5 rows of the processed data
     ## # A tibble: 6 × 11
     ##   Light Shade   OTC Loc   Src     Rep Ind   Plot  fullPlot   DoY tot_Gr
     ##   <int> <int> <int> <chr> <chr> <int> <chr> <chr> <chr>    <int>  <dbl>
-    ## 1     0     0     0 SG    CF        1 A     CF1   SG-CF-1A   168   38.5
-    ## 2     0     0     0 SG    CF        1 A     CF1   SG-CF-1A   175   49  
-    ## 3     0     0     0 SG    CF        1 A     CF1   SG-CF-1A   185   74  
-    ## 4     0     0     0 SG    CF        1 A     CF1   SG-CF-1A   199   89.5
-    ## 5     0     0     0 SG    CF        1 A     CF1   SG-CF-1A   206  102  
-    ## 6     0     0     0 SG    CF        1 A     CF1   SG-CF-1A   214   96
+    ## 1     0     0     1 SG    CF        1 A     CF1   SG-CF-1A   168   38.5
+    ## 2     0     0     1 SG    CF        1 A     CF1   SG-CF-1A   175   49  
+    ## 3     0     0     1 SG    CF        1 A     CF1   SG-CF-1A   185   74  
+    ## 4     0     0     1 SG    CF        1 A     CF1   SG-CF-1A   199   89.5
+    ## 5     0     0     1 SG    CF        1 A     CF1   SG-CF-1A   206  102  
+    ## 6     0     0     1 SG    CF        1 A     CF1   SG-CF-1A   214   96
 
 \#Write processed dataset to new file
 

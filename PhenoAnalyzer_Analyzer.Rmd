@@ -7,7 +7,7 @@ output:
     keep_md: true
 ---
 
-```{r}
+```{r, message = FALSE, warning = FALSE}
 library(tidyverse)
 library(lubridate)
 library(plotly)

@@ -1,7 +1,8 @@
 ---
-title: "Untitled"
-output: word_document
+title: "Analyzing Results of Image Processing"
+author: "Bjorn Larson"
 date: "2022-08-18"
+output: github_document
 ---
 
 ```{r}
@@ -33,7 +34,7 @@ d2<-d1%>%
   summarize(median = median(RGB.2G_RBi))
 d3 <- d1 %>%
   right_join(d2, d1, by = 'date')%>%
-  mutate(resid = RGB.2G_RBi - median)%>%
+  mutate(resid = RGB.2G_RBi - median)
 ```
 
 ```{r}
@@ -49,6 +50,13 @@ plot_ly(d3, x = ~datetime, y = ~(RGB.2G_RBi-mean(RGB.2G_RBi, na.rm = TRUE)), hov
   layout(xaxis=list(title = "Date"), yaxis = list(title = "2G_RBi"))
 ```
 ```{r}
+z_score <- function(x) {z <- (x-mean(x, na.rm = TRUE))/sd(x, na.rm = TRUE)
+
+return(z)}
+x <- (1:20)
+
+z_score(x)
+
 d2 <- read.csv("C:/Users/ecotypes/Downloads/Total Green Length - Coldfoot.csv")%>%
   select(1:18)
 rates2 <- d2%>%
@@ -66,44 +74,43 @@ rates2 <- d2%>%
   filter(Plot == "CF9")%>%
   filter(Ind == "A")
 
-joined <- full_join(d3, rates2, by = "date")
+joined <- full_join(d3, rates2, by = "date")%>%
+  mutate(z_EG = z_score(RGB.2G_RBi),
+         z_GCC = z_score(RGB.pctG),
+         z_TGL = z_score(Rate))
 
 ```
 
 
 ```{r}
-plot_ly(d3, x = ~datetime, y = ~RGB.2G_RBi), hoverinfo = "text", hovertext = paste("Date: ", d4$datetime, "<br>2G_RBi: ", d4$RGB.2G_RBi, "<br>Index: ", d4$idx_label), type = "scatter", mode = "lines+markers")%>%
+plot_ly(d4, x = ~datetime, y = ~RGB.2G_RBi, hoverinfo = "text", hovertext = paste("Date: ", d4$datetime, "<br>2G_RBi: ", d4$RGB.2G_RBi, "<br>Index: ", d4$idx_label), type = "scatter", mode = "lines+markers")%>%
   layout(xaxis=list(title = "Date"), yaxis = list(title = "2G_RBi"))
 
-coeff<-1
-
-x<- c(12,2,3)
-
-(x-mean(x))/sd(x)
-(joined$RGB.2G_RBi-mean(joined$RGB.2G_RBi, na.rm = TRUE))/sd(joined$RGB.2G_RBi, na.rm = TRUE)
 ggplot(joined)+
-  geom_point(aes(x = date, y = (RGB.2G_RBi-mean(RGB.2G_RBi, na.rm = TRUE))/sd(RGB.2G_RBi, na.rm = TRUE)))+
-  geom_point(aes(x = date, y = (RGB.pctG-mean(RGB.pctG, na.rm = TRUE))/sd(RGB.pctG, na.rm = TRUE)), color = "Red")
+  geom_point(aes(x = date, y = z_EG))+
+  geom_point(aes(x = date, y = z_GCC), color = "Blue")+
+  geom_point(aes(x = date, y = z_TGL), color = "Red", size = 3)+
+  theme_bw()
+               
 
 
 ```
 
 
 ```{r}
-ggplot(d, aes(x = time, y = resid))+
+ggplot(d3, aes(x = time, y = resid))+
   geom_point(alpha = 0.1)+
   geom_smooth(method = "lm")+
   labs(y = "Distance from daily mean", x = "Time of Day")
 ```
 
 ```{r}
-d2 <- d%>%
+d5 <- d3%>%
   mutate(datetime = floor_date(datetime, unit = "hour"),
          time = as.factor(hour(datetime)))%>%
   group_by(time)
 
-summarize(d2, mean = mean(resid))
-ggplot(d2, aes(y = resid, x = time))+
+ggplot(d5, aes(y = resid, group = time))+
   geom_boxplot()+
   labs(y = "Distance from daily mean", x = "Time of Day")
 ```

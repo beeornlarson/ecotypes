@@ -1,0 +1,12 @@
+Phenology Analyzer 0.98
+Started on: Oct 18, 2022. 15:13:10
+Processing images from: E:\Phenocam Pictures\Coldfoot\CF-CF-3\Combined\Good
+Number of ROIs: 2
+Name     Type   	   X    Y    W    H
+ROI_31  Freehand 	 NaN  NaN  NaN  NaN
+ROI_32  Freehand 	 NaN  NaN  NaN  NaN
+Processing ROIs all together as one
+[15:13:10] Processing color space: RGB
+[15:19:12] Elapsed time processing 676 images: 361.94 sec.
+Data save on: C:\Users\ecotypes\Documents\ecotypes\Phenocam_data\px_221018_151308.csv
+Finished on: Oct 18, 2022. 15:19:12

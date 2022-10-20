@@ -7,17 +7,16 @@ output: html_document
 
 ```{r}
 library(lubridate)
-library(stringr)
 library(exifr)
-library(tidyr)
+library(tidyverse)
 library(filesstrings)
 library(hms)
 ```
 
 #Changeables
 ```{r}
-camera <- "TL-TL-2" #Camera Name
-site <- "Toolik Lake" #Site
+camera <- "CF-CF-9" #Camera Name
+site <- "Coldfoot" #Site
 ```
 
 #Setup (don't change)
@@ -28,88 +27,41 @@ good_photo_path <- paste0(my_path, "Good/")
 test <- paste0(my_path, "Test/")
 my_path
 ```
+
+#Preparing for fixer loop
 ```{r}
-file_info1 <- file_info1%>%
-  filter(FileSize > 4000000)
-ggplot(file_info1, aes(FileSize))+
-  geom_density()+
-  geom_vline(xintercept = mean(file_info1$FileSize)-2.5*sd(file_info1$FileSize))
-```
-```{r}
+file_list <- list.files(my_path, full = TRUE, pattern = "*.jpg")
 
-file_info2 <- file_info2%>%
-  filter(FileSize > 4000000)
-ggplot(file_info2, aes(FileSize))+
-  geom_density()+
-  geom_vline(xintercept = mean(file_info2$FileSize)-2.5*sd(file_info2$FileSize))
-```
-
-```{r}
-file_info <- file_info%>%
-  filter(FileSize > 4000000)
-ggplot(file_info, aes(FileSize))+
-  geom_density()+
-  geom_vline(xintercept = mean(file_info$FileSize))+
-  geom_vline(xintercept = mean(file_info$FileSize)-2.5*sd(file_info$FileSize))
-```
-
-
-
-#Fixer Loop
-```{r}
-file_list <- list.files(my_path, full = TRUE, pattern = "*.JPG")
-
-file_info2 <- read_exif(file_list)%>%
+file_info <- read_exif(file_list)%>%
   dplyr::select(FileName, CreateDate, FileSize)%>%
   dplyr::mutate(CreateDate = str_replace_all(CreateDate, ":", " "))
+file_info_adj <- file_info%>%
+  filter(FileSize > 4000000)%>%
+  rowid_to_column()
+bad_file_info <- file_info%>%
+  select(CreateDate, FileSize)
 
-for(i in 1:length(file_info2[[1]])){
-  old_name <- paste0(my_path, file_info2[[i,1]])
-  new_name <- paste0(my_path, file_info2[[i,2]], ".JPG")
-  
-  file.rename(from = old_name, to = new_name)
-  
-  ifelse(file_info2[[i,3]] < mean(file_info2[[3]]) - 2.5*sd(file_info2[[3]])), 
-          move_files(new_name, bad_photo_path, overwrite = FALSE),
-          move_files(new_name, good_photo_path, overwrite = FALSE))
-}
+write_csv(file_info, file = "CF-CF-6_exif.csv")
 ```
 
-
+#Fixer loop
 ```{r}
-july2 <- read.csv("C:/Users/ecotypes/Downloads/TL-WS-FiveMin-7.6-7.19.csv")
-july3 <- read.csv("C:/Users/ecotypes/Downloads/TL-WS-FiveMin-7.19-8.9.csv")
-june1 <- read.csv("C:/Users/ecotypes/Downloads/TL-WS-FiveMin-6.16-7.5.csv")
-aug1 <- read.csv("C:/Users/ecotypes/Downloads/TL-WS-FiveMin-8.9-8.29.csv")
-july1 <- read.csv("C:/Users/ecotypes/Downloads/TL-WS-FiveMin-7.5-7.6.csv")
-
-d<-rbind(june1, july1, july2, july3, aug1)%>%
-  mutate(datetime = mdy_hm(TIMESTAMP))%>%
-  arrange(desc(datetime))
-
-file_info3 <- as.data.frame(file_info2)%>%
-  dplyr::select(FileName, LightValue, CreateDate)%>%
-  mutate(datetime = floor_date(ymd_hms(substr(CreateDate, 1, 19)), unit =  "minute"),
-         date = date(datetime),
-         time = lubridate::hms(parse_hms(str_replace_all(substr(CreateDate, 12, 19), " ", ":"))))
+for(i in 1:length(file_info[[1]])){
+  old_name <- paste0(my_path, file_info[[i,1]])
+  new_name <- paste0(my_path, file_info[[i,2]], ".JPG")
   
-light_files <- file_info3
-
-d1 <- left_join(file_info3, d, by = "datetime")
-
-p <- ggplot(d1, aes(x = LightValue, y = NDVI_Red_FR_Up_Avg, z = PPFD_Avg, color = datetime))+
-  geom_point()
-
-ggplotly(p)
-
-plot_ly(d1, x = ~time, y = ~LightValue, type = "scatter", hovertext = paste("Date: ", d1$datetime))
-
-for(i in 1:length(light_files[[1]])){
-  old_name <- paste0(my_path, light_files[[i,1]])
-  new_name <- paste0(my_path, light_files[[i,2]], ".JPG")
+  file.rename(from = old_name, to = new_name) #renaming each photo to make it match the date it was taken
   
-  file.rename(from = old_name, to = new_name)
+  if(file_info[[i,3]] < (mean(file_info_adj$FileSize) - 2.5*sd(file_info_adj$FileSize))){
+    move_files(new_name, bad_photo_path, overwrite = FALSE)
+    write.table(data.frame(camera, file_info[[i, 2]], file_info[[i,3]]), "bad photo log.csv", sep = ",", append = TRUE, quote = FALSE, col.names = FALSE, row.names = FALSE)
+    
+    #if file is too small, move it to a different folder and log the date it was taken along with the file size
+    
+  }
+  else{
+    move_files(new_name, good_photo_path, overwrite = FALSE)
+  }
+  
 }
-  
 ```
-

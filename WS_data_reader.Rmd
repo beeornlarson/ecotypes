@@ -1,0 +1,45 @@
+---
+title: "Reading Weather Station Data"
+author: "Bjorn Larson"
+date: "2022-10-11"
+output: html_document
+---
+
+
+```{r}
+july2 <- read.csv("C:/Users/ecotypes/Downloads/TL-WS-FiveMin-7.6-7.19.csv")
+july3 <- read.csv("C:/Users/ecotypes/Downloads/TL-WS-FiveMin-7.19-8.9.csv")
+june1 <- read.csv("C:/Users/ecotypes/Downloads/TL-WS-FiveMin-6.16-7.5.csv")
+aug1 <- read.csv("C:/Users/ecotypes/Downloads/TL-WS-FiveMin-8.9-8.29.csv")
+july1 <- read.csv("C:/Users/ecotypes/Downloads/TL-WS-FiveMin-7.5-7.6.csv")
+
+d<-rbind(june1, july1, july2, july3, aug1)%>%
+  mutate(datetime = mdy_hm(TIMESTAMP))%>%
+  arrange(desc(datetime))
+
+file_info3 <- as.data.frame(file_info2)%>%
+  dplyr::select(FileName, LightValue, CreateDate)%>%
+  mutate(datetime = floor_date(ymd_hms(substr(CreateDate, 1, 19)), unit =  "minute"),
+         date = date(datetime),
+         time = lubridate::hms(parse_hms(str_replace_all(substr(CreateDate, 12, 19), " ", ":"))))
+  
+light_files <- file_info3
+
+d1 <- left_join(file_info3, d, by = "datetime")
+
+p <- ggplot(d1, aes(x = LightValue, y = NDVI_Red_FR_Up_Avg, z = PPFD_Avg, color = datetime))+
+  geom_point()
+
+ggplotly(p)
+
+plot_ly(d1, x = ~time, y = ~LightValue, type = "scatter", hovertext = paste("Date: ", d1$datetime))
+
+for(i in 1:length(light_files[[1]])){
+  old_name <- paste0(my_path, light_files[[i,1]])
+  new_name <- paste0(my_path, light_files[[i,2]], ".JPG")
+  
+  file.rename(from = old_name, to = new_name)
+}
+  
+```
+

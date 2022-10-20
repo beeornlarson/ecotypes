@@ -1,0 +1,92 @@
+---
+title: "First attempt at Regression"
+author: "Bjorn Larson"
+date: "2022-10-12"
+output: github_document
+---
+
+```{r}
+library(tidyverse)
+library(rethinking)
+library(lubridate)
+library(hms)
+library(nlshelper)
+```
+
+
+
+```{r}
+RGB_data <- read.csv("E:/Phenocam_Analysis/CF_CF_9-dates.csv")%>%
+  filter(!idx_label %in% d_rem$Index)%>%
+  select(1,2,6,8)%>%
+  mutate(datetime = ymd_hms(substr(img, 1, 19)),
+         date = date(datetime),
+         time = parse_hms(str_replace_all(substr(img, 12, 19), " ", ":")),
+         first_day = ymd_hms("2022 01 01 00 00 00"),
+         HoY = as.numeric(difftime(datetime, first_day, "hours")),
+         pctG = RGB.pctG)%>%
+  select('datetime', 'HoY', 'idx_label', 'RGB.2G_RBi', "pctG")
+```
+
+
+```{r}
+d_rem<- read.csv("C:/Users/ecotypes/Downloads/takeout.csv")
+d1 = d%>%
+  filter(!idx_label %in% d_rem$Index)
+```
+
+```{r}
+
+elmore_fun <- function(a_1, b, a_2, c_s, c_f, d_s, d_f, HoY) {a_1 + (b - a_2 * HoY)*(1/(1 + exp(c_s - d_s * HoY)) - 1/(1 + exp(c_f - d_f * HoY)))}
+
+elmore_m1 <- nls(pctG ~ elmore_fun(a_1, b, a_2, c_s, c_f, d_s, d_f, HoY), data = RGB_data, start = list(a_1 = 0.34, b = 0.01, a_2 = -0.0001, c_s = 100, c_f = 72, d_s = 0.58, d_f = 0.3))
+```
+
+```{r}
+gu_fun <- function(y_0, a_s, a_f, b_s, b_f, c_s, c_f, t_s, t_f, HoY) {y_0 + a_s/(1 + exp(-(HoY-t_s)/b_s)^(c_s)) - a_f/(1 + exp(-(HoY - t_f)/b_f)^(c_f))}
+
+gu_m1 <- nls(pctG ~ gu_fun(y_0, a_s, a_f, b_s, b_f, c_s, c_f, t_s, t_f, HoY), data = RGB_data, start = list(y_0 = 0.175, a_s = 0.2, a_f = 0.2, b_s = 20, b_f = 10, c_s = 1, c_f = 1, t_s = 135, t_f = 260),  trace = TRUE)
+
+```
+
+```{r}
+plot_nls(elmore_m1, lines.col = "Red")
+```
+
+
+
+
+```{r}
+RGB_trim <- RGB_data%>%
+  select("HoY", "pctG")
+
+stancode(m1)
+
+m1 <- map2stan(
+  alist(
+    pctG ~ dnorm(mu, sigma),
+    mu <- a_1 + (b - a_2 * HoY)*(1/(1 + exp(c_s - d_s * HoY)) - 1/(1 + exp(c_f - d_f * HoY))),
+    a_1 ~ dnorm(.3047532, .0001),
+    b ~ dnorm(0.0351162, .0001),
+    a_2 ~ dnorm(-0.0001259, .0001),
+    c_s ~ dnorm(20, .0001),
+    d_s ~ dnorm(0.1192949, .0001),
+    c_f ~ dnorm(45, .0001),
+    d_f ~ dnorm(0.1856683, .0001),
+    sigma ~ dunif(0, .0001)
+  ) ,
+  data = RGB_trim,  chains = 4, iter = 2000, warmup = 1000, cores = 4
+)
+```
+```{r}
+pairs(RGB_trim)
+```
+
+
+```{r}
+ggplot(RGB_data, aes(x = HoY, y = RGB.pctG))+
+  geom_point()+
+  geom_function(fun = function(x) {0.1997 + 0.1678/(1 + exp(-(x-142.292)/16.5996)^1.1797) - 0.08898/(1 + exp(-(x-246.745)/10.157)^1.91017)}, color = "Red")
+```
+
+

@@ -1,0 +1,60 @@
+---
+title: "Combining Greenness with GreenLength"
+author: "Bjorn Larson"
+date: "2022-10-11"
+output: html_document
+---
+```{r}
+z_score <- function(x) {z <- (x-mean(x, na.rm = TRUE))/sd(x, na.rm = TRUE)
+
+return(z)}
+x <- (1:20)
+
+z_score(x)
+
+d2 <- read.csv("C:/Users/ecotypes/Downloads/Total Green Length - Coldfoot.csv")%>%
+  select(1:18)
+rates2 <- d2%>%
+  # mutate(X201 = X201/X153,
+  #       X194 = X194/X153,
+  #       X187 = X187/X153,
+  #       X180 = X180/X153,
+  #       X173 = X173/X153,
+  #       X166 = X166/X153,
+  #       X160 = X160/X153,
+  #       X153 = 1)%>%
+  pivot_longer(6:18, names_to = "Day", values_to = "Rate")%>%
+  mutate(date = floor_date(as.Date(as.numeric(substr(Day, 2,4))-1, origin = "2022-01-01")),
+         Loc = "CF")%>%
+  filter(Plot == "CF9")%>%
+  filter(Ind == "A")
+
+joined <- full_join(d3, rates2, by = "date")%>%
+  mutate(z_EG = z_score(RGB.2G_RBi),
+         z_GCC = z_score(RGB.pctG),
+         z_TGL = z_score(Rate))
+
+```
+
+
+```{r}
+plot_ly(d4, x = ~datetime, y = ~RGB.2G_RBi, hoverinfo = "text", hovertext = paste("Date: ", d4$datetime, "<br>2G_RBi: ", d4$RGB.2G_RBi, "<br>Index: ", d4$idx_label), type = "scatter", mode = "lines+markers")%>%
+  layout(xaxis=list(title = "Date"), yaxis = list(title = "2G_RBi"))
+
+ggplot(joined)+
+  geom_point(aes(x = date, y = z_GCC), color = "Blue")+
+  geom_point(aes(x = date, y = z_TGL), color = "Red", size = 3)+
+  theme_bw()+
+  labs(y = "Z-score", x = "Date")
+               
+
+
+```
+
+
+```{r}
+ggplot(d3, aes(x = time, y = resid))+
+  geom_point(alpha = 0.1)+
+  geom_smooth(method = "lm")+
+  labs(y = "Distance from daily mean", x = "Time of Day")
+```

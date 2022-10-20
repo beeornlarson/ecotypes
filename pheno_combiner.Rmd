@@ -1,0 +1,107 @@
+---
+title: "Untitled"
+author: "Bjorn Larson"
+date: "2022-10-19"
+output: html_document
+---
+
+```{r, message = FALSE, warning = FALSE}
+library(tidyverse)
+library(lubridate)
+library(plotly)
+library(hms)
+```
+
+```{r}
+site <- "CF" 
+source <- "CF"
+ind <- "3"
+plot <- paste(site, source, ind, sep = "-")
+
+read_phenocam <- function(path, tussock, ROI="RGB") {
+  processed <- read.csv(path)%>%
+    select(1:2 | contains(ROI))%>%
+    mutate(datetime = ymd_hms(substr(img, 1, 19)),
+           date = date(datetime),
+           time = parse_hms(str_replace_all(substr(img, 12, 19), " ", ":")),
+           site = site,
+           source = source,
+           ind = ind,
+           plot = plot,
+           tussock = tussock,
+           excessG = .[[6]],
+           pctG = .[[8]])%>%
+    select('site', 'source', 'ind', 'plot', 'tussock', 'datetime', 'date', 'time', 'idx_label', 'excessG', "pctG")
+  return(processed)
+}
+```
+
+
+```{r}
+d <- read_phenocam("Phenocam_data/CF-CF-3_6.15-6.22.csv", "B")
+
+d1 <- read_phenocam("Phenocam_data/CF-CF-3_6.22-6.29.csv", "B")
+
+d2 <- read_phenocam("Phenocam_data/CF-CF-3_6.29-9.1.csv", "B", "32")
+
+d3 <- read_phenocam("Phenocam_data/CF-CF-3_6.29-9.1.csv", "C", "31")
+
+combined <- bind_rows(d, d1, d2)
+```
+
+
+```{r}
+write.table(d3, "combined_phenocam_data.csv", sep = ",", append = TRUE, quote = FALSE, col.names = FALSE, row.names = FALSE)
+```
+
+```{r}
+
+toplot <- combined%>%
+  filter(tussock == "A")%>%
+  mutate(time_goodness = if_else(hms(0, 00, 09)< time & time < hms(0, 0, 14), "10:00-1:00", "Not 10:00-1:00"))
+
+plot_ly(toplot, x = ~datetime, y = ~excessG, hoverinfo = "text", color = ~time_goodness, hovertext = paste("Date: ", toplot$datetime, "<br>%G: ", toplot$excessG, "<br>Index: ", toplot$idx_label), type = "scatter", mode = "markers", colors = "Set1")%>%
+  layout(xaxis=list(title = "Date"), yaxis = list(title = "Green Percent"))
+  
+```
+
+```{r}
+combined <-read.csv("combined_phenocam_data.csv")
+toplot <- combined%>%
+  mutate(time_goodness = if_else(hms(0, 00, 09)< time & time < hms(0, 0, 14), "10:00-1:00", "Not 10:00-1:00"),
+         datetime = mdy_hm(datetime))%>%
+  filter(!time < hms(0, 0, 14) | !hms(0, 00, 09)< time)
+
+plot_ly(toplot, x = ~datetime, y = ~pctG, hoverinfo = "text", color = ~time_goodness, hovertext = paste("Date: ", toplot$datetime, "<br>%G: ", toplot$excessG, "<br>Index: ", toplot$idx_label), type = "scatter", mode = "markers", colors = "Set1")%>%
+  layout(xaxis=list(title = "Date"), yaxis = list(title = "Green Percent"))
+
+```
+
+```{r}
+to_analyze <- combined %>%
+  filter(plot == "CF-CF-6")%>%
+  filter(tussock == "C")%>%
+  mutate(datetime = mdy_hm(datetime),
+         first_day = ymd_hms("2022 01 01 00 00 00"),
+         HoY = as.numeric(difftime(datetime, first_day, "hours")),
+         date = date(datetime),
+         time = parse_hms(time))%>%
+  filter(time > hms(0,0,9) & time < hms(0,0,14))
+
+
+plot_ly(to_analyze, x = ~datetime,= y = ~pctG,  type = "scatter", mode = "markers")%>%
+  layout(xaxis=list(title = "Date"), yaxis = list(title = "Green Percent"))
+
+```
+
+```{r}
+elmore_fun <- function(a_1, b, a_2, c_s, c_f, d_s, d_f, HoY) {a_1 + (b - a_2 * HoY)*(1/(1 + exp(c_s - d_s * HoY)) - 1/(1 + exp(c_f - d_f * HoY)))}
+
+elmore_m1 <- nls(pctG ~ elmore_fun(a_1, b, a_2, c_s, c_f, d_s, d_f, HoY), data = to_analyze, start = list(a_1 = 0.34, b = 0.01, a_2 = -0.0001, c_s = 100, c_f = 72, d_s = 0.58, d_f = 0.3))
+```
+```{r}
+ggplot(to_analyze, aes(x = HoY, y = pctG))+
+  geom_point()+
+  geom_function(fun = function(HoY) {.36 + (0.01 - -0.0001 * HoY)*(1/(1 + exp(90 - 0.35 * HoY)) - 1/(1 + exp(72 - 0.3 * HoY)))}, color = "Red")
+```
+

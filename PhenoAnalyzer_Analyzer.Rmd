@@ -14,9 +14,46 @@ library(plotly)
 library(hms)
 ```
 
+```{r}
+site <- "CF" 
+source <- "CF"
+ind <- "3"
+plot <- paste(site, source, ind, sep = "-")
+
+read_phenocam <- function(path, tussock, ROI="RGB") {
+  processed <- read.csv(path)%>%
+    select(1:2 | contains(ROI))%>%
+    mutate(datetime = ymd_hms(substr(img, 1, 19)),
+           date = date(datetime),
+           time = parse_hms(str_replace_all(substr(img, 12, 19), " ", ":")),
+           site = site,
+           source = source,
+           ind = ind,
+           plot = plot,
+           tussock = tussock,
+           excessG = .[[6]],
+           pctG = .[[8]])%>%
+    select('site', 'source', 'ind', 'plot', 'tussock', 'datetime', 'date', 'time', 'idx_label', 'excessG', "pctG")
+  return(processed)
+}
+
+d <- read_phenocam("Phenocam_data/CF-CF-3_6.15-6.22.csv", "C")
+
+d1 <- read_phenocam("Phenocam_data/CF-CF-3_6.22-6.29.csv", "C")
+
+d2 <- read_phenocam("Phenocam_data/CF-CF-3_6.29-9.1.csv", "C", "31")
+
+d3 <- read_phenocam("Phenocam_data/CF-CF-3_6.29-9.1.csv", "B", "32")
+
+combined <- bind_rows(d, d1, d2, d3)
+write.table(combined, "combined_phenocam_data.csv", sep = ",", append = TRUE, quote = FALSE, col.names = TRUE, row.names = FALSE)
+```
+
+
+
 
 ```{r}
-d <- read.csv("E:/Phenocam_Analysis/CF_CF_9-dates.csv")%>%
+d <- read.csv("Phenocam_data/CF-CF-3_6.15-6.22.csv")%>%
   select(1,2,6,8)%>%
   mutate(datetime = ymd_hms(substr(img, 1, 19)),
          date = date(datetime),
@@ -31,13 +68,22 @@ d1 = d%>%
 ```
 
 ```{r}
-d2<-d1%>%
+d2<-d%>%
   group_by(date)%>%
   summarize(median = median(RGB.2G_RBi))
-d3 <- d1 %>%
-  right_join(d2, d1, by = 'date')%>%
+d3 <- d %>%
+  right_join(d2, d, by = 'date')%>%
   mutate(resid = RGB.2G_RBi - median)
 ```
+
+```{r}
+exif <- read.csv("CF-CF-9_exif.csv")%>%
+  mutate(datetime = ymd_hms(CreateDate))
+d5 <- right_join(d3, exif, by = "datetime")
+
+plot_ly(d5, x = ~FileSize, y = ~resid, hovertext = paste0("Date:", d5$datetime))
+```
+
 
 ```{r}
 d4 = d3%>%
@@ -48,63 +94,17 @@ d4 = d3%>%
 
 
 ```{r}
-plot_ly(d3, x = ~datetime, y = ~(RGB.2G_RBi-mean(RGB.2G_RBi, na.rm = TRUE)), hoverinfo = "text", hovertext = paste("Date: ", d3$datetime, "<br>2G_RBi: ", d3$RGB.2G_RBi, "<br>Index: ", d3$idx_label), type = "scatter", mode = "lines+markers")%>%
-  layout(xaxis=list(title = "Date"), yaxis = list(title = "2G_RBi"))
-```
-```{r}
-z_score <- function(x) {z <- (x-mean(x, na.rm = TRUE))/sd(x, na.rm = TRUE)
+toplot <- combined%>%
+  filter(tussock == "B")%>%
+  mutate(time_goodness = if_else(hms(0, 00, 09)< time & time < hms(0, 0, 14), "10:00-1:00", "Not 10:00-1:00"))
+  filter(time > hms(0, 00, 09))%>%
+  filter(time < hms(0, 0, 14))
 
-return(z)}
-x <- (1:20)
-
-z_score(x)
-
-d2 <- read.csv("C:/Users/ecotypes/Downloads/Total Green Length - Coldfoot.csv")%>%
-  select(1:18)
-rates2 <- d2%>%
-  # mutate(X201 = X201/X153,
-  #       X194 = X194/X153,
-  #       X187 = X187/X153,
-  #       X180 = X180/X153,
-  #       X173 = X173/X153,
-  #       X166 = X166/X153,
-  #       X160 = X160/X153,
-  #       X153 = 1)%>%
-  pivot_longer(6:18, names_to = "Day", values_to = "Rate")%>%
-  mutate(date = floor_date(as.Date(as.numeric(substr(Day, 2,4))-1, origin = "2022-01-01")),
-         Loc = "CF")%>%
-  filter(Plot == "CF9")%>%
-  filter(Ind == "A")
-
-joined <- full_join(d3, rates2, by = "date")%>%
-  mutate(z_EG = z_score(RGB.2G_RBi),
-         z_GCC = z_score(RGB.pctG),
-         z_TGL = z_score(Rate))
-
+plot_ly(toplot, x = ~datetime, y = ~pctG, hoverinfo = "text", color = ~time_goodness, hovertext = paste("Date: ", toplot$datetime, "<br>%G: ", toplot$pctG, "<br>Index: ", toplot$idx_label), type = "scatter", mode = "markers", colors = "Set1")%>%
+  layout(xaxis=list(title = "Date"), yaxis = list(title = "Green Percent"))
+  
 ```
 
-
-```{r}
-plot_ly(d4, x = ~datetime, y = ~RGB.2G_RBi, hoverinfo = "text", hovertext = paste("Date: ", d4$datetime, "<br>2G_RBi: ", d4$RGB.2G_RBi, "<br>Index: ", d4$idx_label), type = "scatter", mode = "lines+markers")%>%
-  layout(xaxis=list(title = "Date"), yaxis = list(title = "2G_RBi"))
-
-ggplot(joined)+
-  geom_point(aes(x = date, y = z_EG))+
-  geom_point(aes(x = date, y = z_GCC), color = "Blue")+
-  geom_point(aes(x = date, y = z_TGL), color = "Red", size = 3)+
-  theme_bw()
-               
-
-
-```
-
-
-```{r}
-ggplot(d3, aes(x = time, y = resid))+
-  geom_point(alpha = 0.1)+
-  geom_smooth(method = "lm")+
-  labs(y = "Distance from daily mean", x = "Time of Day")
-```
 
 ```{r}
 d5 <- d3%>%

@@ -1,0 +1,9 @@
+Phenology Analyzer 0.98
+Started on: Oct 18, 2022. 14:10:25
+Processing images from: E:\Phenocam Pictures\Coldfoot\CF-CF-9\Combined
+Number of ROIs: 1
+Name     Type   	   X    Y    W    H
+ROI_24  Freehand 	 NaN  NaN  NaN  NaN
+Processing ROIs all together as one
+[14:10:26] Processing color space: RGB
+[14:12:45] Processing images canceled by user
